@@ -3,6 +3,8 @@ package ding_talk
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -53,9 +55,10 @@ func (d *DingTalkClient) Execute(params interface{}) (RobotSendResponse, error) 
 		log.Fatalf("叮叮通知参数验证失败：params: %+v", params)
 	}
 	// json Marshal
+
 	data, err := json.Marshal(params)
 	if err != nil {
-		return response, err
+		return response, errors.New(fmt.Sprintf("json序列化失败 %+v",err))
 	}
 	body := bytes.NewReader(data)
 
@@ -63,7 +66,7 @@ func (d *DingTalkClient) Execute(params interface{}) (RobotSendResponse, error) 
 	request := &http.Request{}
 	request, err = http.NewRequest(http.MethodPost, d.gatewayUrl, body)
 	if err != nil {
-		return response, err
+		return response, errors.New(fmt.Sprintf("new request 失败 %+v",err))
 	}
 
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
@@ -71,18 +74,18 @@ func (d *DingTalkClient) Execute(params interface{}) (RobotSendResponse, error) 
 	resp, err := client.Do(request)
 	if err != nil {
 		log.Printf("发送通知失败：%+v\n", err)
-		return response, err
+		return response, errors.New(fmt.Sprintf("发送通知失败 %+v",err))
 	}
 	defer resp.Body.Close()
 
 	respData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return response, err
+		return response, errors.New(fmt.Sprintf("读取response值失败 %+v",err))
 	}
 
 	err = json.Unmarshal(respData, &response)
 	if err != nil {
-		return response, err
+		return response, errors.New(fmt.Sprintf("json反序列化response失败 %+v",err))
 	}
 	return response, err
 }
